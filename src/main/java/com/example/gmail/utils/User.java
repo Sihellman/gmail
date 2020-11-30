@@ -1,5 +1,6 @@
 package com.example.gmail.utils;
 
+import com.example.gmail.model.ExternalGmail;
 import com.example.gmail.model.Gmail;
 import com.example.gmail.service.UserPass;
 import lombok.Data;
@@ -17,7 +18,7 @@ public class User {
     public final static Map<UUID, UserPass> map = Stream.of(
             new AbstractMap.SimpleEntry<>(UUID.randomUUID(), UserPass.builder()
                     .password("pass")
-                    .username("jef")
+                    .username("jeffy")
                     .build()  ),
             new AbstractMap.SimpleEntry<>(UUID.randomUUID(), UserPass.builder()
                     .password("pass")
@@ -29,6 +30,7 @@ public class User {
 
 
     public final static List<Gmail> GMAILS =  new ArrayList<>();
+    public final static List<ExternalGmail> EXTERNAL_GMAILS =  new ArrayList<>();
 
 
 }

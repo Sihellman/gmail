@@ -1,16 +1,17 @@
 package com.example.gmail.service;
 
+import com.example.gmail.config.ExternalMailConfiguration;
 import com.example.gmail.model.*;
 import com.example.gmail.utils.User;
 import lombok.RequiredArgsConstructor;
 import org.graalvm.compiler.lir.LIRInstruction;
-import org.springframework.http.HttpEntity;
-import org.springframework.http.HttpStatus;
-import org.springframework.http.ResponseEntity;
+import org.springframework.http.*;
 import org.springframework.stereotype.Service;
 import org.springframework.web.client.HttpClientErrorException;
+import org.springframework.web.client.HttpStatusCodeException;
 import org.springframework.web.client.RestTemplate;
 
+import java.util.Base64;
 import java.util.LinkedList;
 import java.util.List;
 import java.util.UUID;
@@ -19,7 +20,11 @@ import java.util.UUID;
 
 public class GmailService {
     private final RestTemplate restTemplate;
-    public  GmailService(RestTemplate restTemplate){
+    private final ExternalMailConfiguration externalMailConfiguration;
+    String newString = "";
+    List<InboxView> inboxContents = new LinkedList<>();
+    public  GmailService(RestTemplate restTemplate, ExternalMailConfiguration externalMailConfiguration){
+        this.externalMailConfiguration = externalMailConfiguration;
         this.restTemplate = restTemplate;
     }
     public Object getPrimaryKey(UserPass userPass){//should not need loop
@@ -40,15 +45,60 @@ public class GmailService {
         //return User.map.toString();
     }
     public Object receiveExternalMail(GmailinTransit gmailinTransit){
+        String fromUserName = gmailinTransit.getFrom();
+        String toUserName = gmailinTransit.getRecipientUsername();
+
+        for(UUID key : User.map.keySet()){
+            if(toUserName.equals(User.map.get(key).getUsername())){
+                ExternalGmail externalGmail = new ExternalGmail(fromUserName, toUserName, gmailinTransit.getMessage());
+                User.EXTERNAL_GMAILS.add(externalGmail);
+                return new ResponseEntity<>( "you got mail", HttpStatus.OK);
+
+            }
+
+        }
+        return new ResponseEntity<>( "no such person", HttpStatus.NOT_FOUND);
+
+
 
 
     }
+    public Object receiveString(StringObject string){
 
-    public Object send(GmailinTransit gmailinTransit){//avoided a loop, had to use a loop
+        for(int i = string.getString().length()-1; i >= 0; i--){
+            newString += string.getString().charAt(i) + "";
+        }
+        return new ResponseEntity<>( newString, HttpStatus.OK);
+    }
+    public Object showString(){
+        return new ResponseEntity<>(newString, HttpStatus.OK);
+    }
+    public Object sendString(StringObject string){
+        String headerValue = new String(Base64.getEncoder().encode(externalMailConfiguration.getKey().getBytes()));
+        HttpHeaders headers = new HttpHeaders();
+        headers.add("api-key", headerValue);
+        HttpEntity<StringObject> httpEntity = new HttpEntity<>(string, headers);
+
+        try {
+            restTemplate.exchange("http://" + "localhost:8080/api/v1/email/receiveString", HttpMethod.POST, httpEntity, Void.class);
+        }
+        catch (HttpStatusCodeException a) {
+            return new ResponseEntity<>(HttpStatus.BAD_REQUEST);
+        }
+        return new ResponseEntity<>(HttpStatus.OK);
+
+    }
+
+    public Object send(GmailinTransit gmailinTransit){
        try{
            UUID uuid = UUID.fromString(gmailinTransit.getFrom());
+           String headerValue = new String(Base64.getEncoder().encode(externalMailConfiguration.getKey().getBytes()));
+           HttpHeaders headers = new HttpHeaders();
+           headers.add("api-key", headerValue);
+           HttpEntity<GmailinTransit> httpEntity = new HttpEntity<>(gmailinTransit, headers);
            if(User.map.containsKey(uuid) == false){
-               return new ResponseEntity<>("invalid UUID", HttpStatus.UNPROCESSABLE_ENTITY);
+               return new ResponseEntity<>("invalid UUID", HttpStatus.UNAUTHORIZED);
+
            }
            for(UUID key : User.map.keySet()){
                if(gmailinTransit.getRecipientUsername().equals(User.map.get(key).getUsername())){
@@ -57,20 +107,34 @@ public class GmailService {
                    return new ResponseEntity<>( "message sent", HttpStatus.OK);
                }
 
+
            }
+           //if the recipient was not found in the map
+           gmailinTransit.from =  User.map.get(uuid).getUsername();
+
+           try {
+               restTemplate.exchange("http://" + "localhost:8080/api/v1/email/receiveExternalMail", HttpMethod.POST, httpEntity, Void.class);
+           }
+           catch (HttpStatusCodeException a) {
+               return new ResponseEntity<>(HttpStatus.BAD_REQUEST);
+           }
+           return new ResponseEntity<>(HttpStatus.OK);
+
        }
        catch (IllegalArgumentException e){
+
            return new ResponseEntity<>("invalid UUID", HttpStatus.UNPROCESSABLE_ENTITY);
+
        }
 
-        return new ResponseEntity<>("nonexistent username", HttpStatus.NOT_FOUND);
+
     }
-    public Object inbox(Key key){//avoided a loop
+    public Object inbox(Key key){
         UUID user = UUID.fromString(key.getKey());
         if(User.map.containsKey(user) == false){
             return new ResponseEntity<>("invalid UUID", HttpStatus.UNPROCESSABLE_ENTITY);
         }
-        List<InboxView> inboxContents = new LinkedList<>();
+
 
         for(int i = 0; i < User.GMAILS.size(); i++){
             if(User.GMAILS.get(i).getTo().equals(user)){
@@ -82,7 +146,7 @@ public class GmailService {
         return new ResponseEntity<>(inboxContents, HttpStatus.OK);
     }
 
-    public Object outbox(Key key){//avoided a loop
+    public Object outbox(Key key){
         UUID user = UUID.fromString(key.getKey());
         if(User.map.containsKey(user) == false){
             return new ResponseEntity<>("invalid UUID", HttpStatus.UNPROCESSABLE_ENTITY);

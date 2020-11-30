@@ -17,4 +17,5 @@ public class GmailinTransit {
     public String recipientUsername;
     public String message;
 
+
 }
