@@ -11,23 +11,21 @@ import org.springframework.web.client.HttpClientErrorException;
 import org.springframework.web.client.HttpStatusCodeException;
 import org.springframework.web.client.RestTemplate;
 
-import java.util.Base64;
-import java.util.LinkedList;
-import java.util.List;
-import java.util.UUID;
+import java.util.*;
 
 @Service
-
+//the way to go is to have a class that has a gmail object and an external gmail object.
+//one or the other can be null. if one is null, get info from the other.
 public class GmailService {
     private final RestTemplate restTemplate;
     private final ExternalMailConfiguration externalMailConfiguration;
     String newString = "";
-    List<InboxView> inboxContents = new LinkedList<>();
+
     public  GmailService(RestTemplate restTemplate, ExternalMailConfiguration externalMailConfiguration){
         this.externalMailConfiguration = externalMailConfiguration;
         this.restTemplate = restTemplate;
     }
-    public Object getPrimaryKey(UserPass userPass){//should not need loop
+    public Object getPrimaryKey(UserPass userPass){
         //UserPass userPassSivia = new UserPass("sivia", "hippo");
         //User.map.put(userPassSivia, UUID.randomUUID());
         /*if(User.map.containsKey(userPass)){
@@ -40,7 +38,7 @@ public class GmailService {
             }
         }
 
-        return new ResponseEntity<>("better luck next time  ", HttpStatus.UNAUTHORIZED);
+        return new ResponseEntity<>("nonexistent username  ", HttpStatus.UNAUTHORIZED);
         //return userPass.toString();
         //return User.map.toString();
     }
@@ -52,6 +50,8 @@ public class GmailService {
             if(toUserName.equals(User.map.get(key).getUsername())){
                 ExternalGmail externalGmail = new ExternalGmail(fromUserName, toUserName, gmailinTransit.getMessage());
                 User.EXTERNAL_GMAILS.add(externalGmail);
+                User.GMAILS.add(null);
+
                 return new ResponseEntity<>( "you got mail", HttpStatus.OK);
 
             }
@@ -83,7 +83,7 @@ public class GmailService {
             restTemplate.exchange("http://" + "localhost:8080/api/v1/email/receiveString", HttpMethod.POST, httpEntity, Void.class);
         }
         catch (HttpStatusCodeException a) {
-            return new ResponseEntity<>(HttpStatus.BAD_REQUEST);
+            return new ResponseEntity<>("user not found", HttpStatus.BAD_REQUEST);
         }
         return new ResponseEntity<>(HttpStatus.OK);
 
@@ -104,6 +104,8 @@ public class GmailService {
                if(gmailinTransit.getRecipientUsername().equals(User.map.get(key).getUsername())){
                    Gmail gmail = new Gmail(key, uuid, gmailinTransit.getMessage());
                    User.GMAILS.add(gmail);
+                   User.EXTERNAL_GMAILS.add(null);
+
                    return new ResponseEntity<>( "message sent", HttpStatus.OK);
                }
 
@@ -111,6 +113,9 @@ public class GmailService {
            }
            //if the recipient was not found in the map
            gmailinTransit.from =  User.map.get(uuid).getUsername();
+            ExternalGmail externalGmail = new ExternalGmail( gmailinTransit.from ,gmailinTransit.recipientUsername, gmailinTransit.message);
+            User.GMAILS.add(null);
+            User.EXTERNAL_GMAILS.add(externalGmail);
 
            try {
                restTemplate.exchange("http://" + "localhost:8080/api/v1/email/receiveExternalMail", HttpMethod.POST, httpEntity, Void.class);
@@ -118,7 +123,7 @@ public class GmailService {
            catch (HttpStatusCodeException a) {
                return new ResponseEntity<>(HttpStatus.BAD_REQUEST);
            }
-           return new ResponseEntity<>(HttpStatus.OK);
+           return new ResponseEntity<>("message sent", HttpStatus.OK);
 
        }
        catch (IllegalArgumentException e){
@@ -136,13 +141,32 @@ public class GmailService {
         }
 
 
-        for(int i = 0; i < User.GMAILS.size(); i++){
+        /*for(int i = 0; i < User.GMAILS.size(); i++){
             if(User.GMAILS.get(i).getTo().equals(user)){
                 String username = User.map.get(User.GMAILS.get(i).getFrom()).getUsername();
                 InboxView inboxView = new InboxView(username, User.GMAILS.get(i).getMessage());
                 inboxContents.add(inboxView);
             }
+        }*/
+        List<InboxView> inboxContents = new LinkedList<>();
+        for (int i = 0; i < User.GMAILS.size(); i++){
+            if(User.GMAILS.get(i) == null){
+                    InboxView inboxView = new InboxView(User.EXTERNAL_GMAILS.get(i).getFromUserName(), User.EXTERNAL_GMAILS.get(i).getMessage());
+                    inboxContents.add(inboxView);
+
+            }
+            else{
+                if(User.GMAILS.get(i).getTo().equals(user)){
+                    String username = User.map.get(User.GMAILS.get(i).getFrom()).getUsername();
+                    InboxView inboxView = new InboxView(username, User.GMAILS.get(i).getMessage());
+                    inboxContents.add(inboxView);
+                }
+            }
+
         }
+
+
+
         return new ResponseEntity<>(inboxContents, HttpStatus.OK);
     }
 
@@ -153,12 +177,20 @@ public class GmailService {
         }
         List<OutboxView> outboxContents = new LinkedList<>();
 
-        for(int i = 0; i < User.GMAILS.size(); i++){
-            if(User.GMAILS.get(i).getFrom().equals(user)){
-                String username = User.map.get(User.GMAILS.get(i).getTo()).getUsername();
-                OutboxView outboxView = new OutboxView(username, User.GMAILS.get(i).getMessage());
-                outboxContents.add(outboxView);
+        for (int i = 0; i < User.GMAILS.size(); i++){
+            if(User.GMAILS.get(i) == null){
+                    OutboxView outboxView = new OutboxView(User.EXTERNAL_GMAILS.get(i).getToUserName(), User.EXTERNAL_GMAILS.get(i).getMessage());
+                    outboxContents.add(outboxView);
+
             }
+            else{
+                if(User.GMAILS.get(i).getFrom().equals(user)){
+                    String username = User.map.get(User.GMAILS.get(i).getTo()).getUsername();
+                    OutboxView outboxView = new OutboxView(username, User.GMAILS.get(i).getMessage());
+                    outboxContents.add(outboxView);
+                }
+            }
+
         }
         return new ResponseEntity<>(outboxContents, HttpStatus.OK);
     }

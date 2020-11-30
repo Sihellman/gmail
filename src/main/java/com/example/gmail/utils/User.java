@@ -18,7 +18,7 @@ public class User {
     public final static Map<UUID, UserPass> map = Stream.of(
             new AbstractMap.SimpleEntry<>(UUID.randomUUID(), UserPass.builder()
                     .password("pass")
-                    .username("jeffy")
+                    .username("jeff")
                     .build()  ),
             new AbstractMap.SimpleEntry<>(UUID.randomUUID(), UserPass.builder()
                     .password("pass")
@@ -31,6 +31,5 @@ public class User {
 
     public final static List<Gmail> GMAILS =  new ArrayList<>();
     public final static List<ExternalGmail> EXTERNAL_GMAILS =  new ArrayList<>();
-
 
 }
