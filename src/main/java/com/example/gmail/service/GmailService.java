@@ -3,15 +3,15 @@ package com.example.gmail.service;
 import com.example.gmail.config.ExternalMailConfiguration;
 import com.example.gmail.model.*;
 import com.example.gmail.utils.User;
-import lombok.RequiredArgsConstructor;
-import org.graalvm.compiler.lir.LIRInstruction;
 import org.springframework.http.*;
 import org.springframework.stereotype.Service;
-import org.springframework.web.client.HttpClientErrorException;
 import org.springframework.web.client.HttpStatusCodeException;
 import org.springframework.web.client.RestTemplate;
 
-import java.util.*;
+import java.util.Base64;
+import java.util.LinkedList;
+import java.util.List;
+import java.util.UUID;
 
 @Service
 //the way to go is to have a class that has a gmail object and an external gmail object.
@@ -34,6 +34,7 @@ public class GmailService {
 
         for(UUID key : User.map.keySet()){
             if(userPass.equals(User.map.get(key))){
+
                 return new ResponseEntity<>( key.toString(), HttpStatus.OK);
             }
         }
@@ -91,6 +92,7 @@ public class GmailService {
 
     public Object send(GmailinTransit gmailinTransit){
        try{
+
            UUID uuid = UUID.fromString(gmailinTransit.getFrom());
            String headerValue = new String(Base64.getEncoder().encode(externalMailConfiguration.getKey().getBytes()));
            HttpHeaders headers = new HttpHeaders();
@@ -128,7 +130,7 @@ public class GmailService {
        }
        catch (IllegalArgumentException e){
 
-           return new ResponseEntity<>("invalid UUID", HttpStatus.UNPROCESSABLE_ENTITY);
+           return new ResponseEntity<>("invalid UUID", HttpStatus.UNAUTHORIZED);
 
        }
 
@@ -137,7 +139,7 @@ public class GmailService {
     public Object inbox(Key key){
         UUID user = UUID.fromString(key.getKey());
         if(User.map.containsKey(user) == false){
-            return new ResponseEntity<>("invalid UUID", HttpStatus.UNPROCESSABLE_ENTITY);
+            return new ResponseEntity<>("invalid UUID", HttpStatus.UNAUTHORIZED);
         }
 
 
@@ -148,6 +150,7 @@ public class GmailService {
                 inboxContents.add(inboxView);
             }
         }*/
+
         List<InboxView> inboxContents = new LinkedList<>();
         for (int i = 0; i < User.GMAILS.size(); i++){
             if(User.GMAILS.get(i) == null){
@@ -173,7 +176,7 @@ public class GmailService {
     public Object outbox(Key key){
         UUID user = UUID.fromString(key.getKey());
         if(User.map.containsKey(user) == false){
-            return new ResponseEntity<>("invalid UUID", HttpStatus.UNPROCESSABLE_ENTITY);
+            return new ResponseEntity<>("invalid UUID", HttpStatus.UNAUTHORIZED);
         }
         List<OutboxView> outboxContents = new LinkedList<>();
 

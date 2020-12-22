@@ -2,7 +2,7 @@ package com.example.gmail.utils;
 
 import com.example.gmail.model.ExternalGmail;
 import com.example.gmail.model.Gmail;
-import com.example.gmail.service.UserPass;
+import com.example.gmail.model.UserPass;
 import lombok.Data;
 import lombok.experimental.UtilityClass;
 
@@ -31,5 +31,7 @@ public class User {
 
     public final static List<Gmail> GMAILS =  new ArrayList<>();
     public final static List<ExternalGmail> EXTERNAL_GMAILS =  new ArrayList<>();
+
+
 
 }
