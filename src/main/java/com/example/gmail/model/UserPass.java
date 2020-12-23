@@ -13,5 +13,10 @@ public class UserPass {
 
     public String password;
 
+    public UserPass(String username, String password){
+        this.username = username;
+        this.password = password;
+    }
+
 
 }

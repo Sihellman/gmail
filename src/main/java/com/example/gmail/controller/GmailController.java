@@ -13,6 +13,7 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
 import java.io.UnsupportedEncodingException;
+import java.nio.charset.StandardCharsets;
 import java.util.Base64;
 
 @AllArgsConstructor
@@ -25,29 +26,34 @@ import java.util.Base64;
 public class GmailController {
     private final GmailService gmailService;
     private final ExternalMailConfiguration externalMailConfiguration;
-    private final FeatureSwitchConfiguration featureSwitchConfiguration;
-    //@ApiOperation(notes="log in and receive uuid")
+    public final static FeatureSwitchConfiguration featureSwitchConfiguration = new FeatureSwitchConfiguration();
+    @ApiOperation(notes="log in and receive uuid", value = "login")
     /*@ApiResponses(value = {@ApiResponse(code = 401, message = "nonexistent username"),
     //@ApiResponses(value = {@ApiResponse(code = 200, message = "ok", response = String.class,         examples = @Example(value = {@ExampleProperty(mediaType = "application/json", ))}),
 
 
             @ApiResponse(code = 503, message = "unavailable")})*/
 
-  /*  @ApiResponses(value = {@ApiResponse(code = 200, message = "ok"),
-            @ApiResponse(code = 503, message = "unavailable"),
-            @ApiResponse(code = 401, message = "nonexistent username")})*/
+
   @ApiResponses(value = {@ApiResponse(code = 200, message = "ok", response = Object.class),
           @ApiResponse(code = 503, message = "unavailable"),
           @ApiResponse(code = 401, message = "nonexistent username")})
-    @ResponseStatus(HttpStatus.OK)
+
     @PostMapping("/login")
     public Object getPrimaryKey(@ApiParam(value = "As of now, there can be multiple users with the same username. " +
             " Each userpass is stored with a uuid, in a hashmap.") @RequestBody UserPass userPass ) {
-        if (featureSwitchConfiguration.isEmailUp()){
-            //System.out.println("complex stuff" + externalMailConfiguration.getIp());
-            return gmailService.getPrimaryKey(userPass);
-        }
-        return new ResponseEntity<>("not available", HttpStatus.SERVICE_UNAVAILABLE);
+      //featureSwitchConfiguration.setEmailUp(true);
+
+          if ((featureSwitchConfiguration.isEmailUp()) ){
+              //System.out.println("complex stuff" + externalMailConfiguration.getIp());
+              return gmailService.getPrimaryKey(userPass);
+          }
+          else{
+              return new ResponseEntity<>("unavailable", HttpStatus.SERVICE_UNAVAILABLE);
+          }
+
+
+
 
     }
 
@@ -77,18 +83,20 @@ public class GmailController {
     public Object receiveExternalMail(@ApiParam("If the sender is not external, the from string " +
             " will be a uuid, otherwise the from will be a username. Posting to receiveExternalMail " +
             " from this server should only be for testing purposes because the sender will show up in " +
-            " the inbox as a uuid.")
-                                          @RequestBody GmailinTransit gmailinTransit,
+            " the inbox as a uuid.") @RequestBody GmailinTransit gmailinTransit,
                                       @ApiParam(value = "Base 64 encoded 'letMeIn' as the value. The key is api-key.")
     @RequestHeader( value = "api-key") String key) throws UnsupportedEncodingException {
-        if (featureSwitchConfiguration.isEmailUp()){
-            if(Base64.getEncoder().encodeToString(
-                    "letMeIn".getBytes("utf-8")).equals(key) == false){
-                return new ResponseEntity<>( "wrong code", HttpStatus.UNAUTHORIZED);
+        if (featureSwitchConfiguration != null){
+            if (featureSwitchConfiguration.isEmailUp()){
+                if(!Base64.getEncoder().encodeToString(
+                        "letMeIn".getBytes(StandardCharsets.UTF_8)).equals(key)){
+                    return new ResponseEntity<>( "wrong code", HttpStatus.UNAUTHORIZED);
+                }
+                return gmailService.receiveExternalMail(gmailinTransit);
             }
-            return gmailService.receiveExternalMail(gmailinTransit);
         }
         return new ResponseEntity<>("not available", HttpStatus.SERVICE_UNAVAILABLE);
+
 
     }
     @ApiOperation(value = "send", notes = "send mail internally and externally")
