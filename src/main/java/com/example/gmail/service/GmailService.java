@@ -8,10 +8,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.web.client.HttpStatusCodeException;
 import org.springframework.web.client.RestTemplate;
 
-import java.util.Base64;
-import java.util.LinkedList;
-import java.util.List;
-import java.util.UUID;
+import java.util.*;
 
 @Service
 //the way to go is to have a class that has a gmail object and an external gmail object.
@@ -120,12 +117,15 @@ public class GmailService {
             User.EXTERNAL_GMAILS.add(externalGmail);
 
            try {
-               restTemplate.exchange("http://" + "localhost:8080/api/v1/email/receiveExternalMail", HttpMethod.POST, httpEntity, Void.class);
+               ResponseEntity<GmailinTransit> x = restTemplate.exchange("http://" + "localhost:8080/api/v1/email/receiveExternalMail", HttpMethod.POST, httpEntity, GmailinTransit.class);
+               Optional<GmailinTransit> s = Optional.ofNullable(x.getBody());
+               Optional<String> a = Optional.empty();
+               return s.orElseThrow(() -> new Exception("")).getRecipientUsername();
            }
-           catch (HttpStatusCodeException a) {
+           catch (Exception a) {
                return new ResponseEntity<>(HttpStatus.BAD_REQUEST);
            }
-           return new ResponseEntity<>("message sent", HttpStatus.OK);
+           //return new ResponseEntity<>("message sent", HttpStatus.OK);
 
        }
        catch (IllegalArgumentException e){

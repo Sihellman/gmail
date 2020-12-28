@@ -26,7 +26,7 @@ import java.util.Base64;
 public class GmailController {
     private final GmailService gmailService;
     private final ExternalMailConfiguration externalMailConfiguration;
-    public final static FeatureSwitchConfiguration featureSwitchConfiguration = new FeatureSwitchConfiguration();
+    public final FeatureSwitchConfiguration featureSwitchConfiguration;
     @ApiOperation(notes="log in and receive uuid", value = "login")
     /*@ApiResponses(value = {@ApiResponse(code = 401, message = "nonexistent username"),
     //@ApiResponses(value = {@ApiResponse(code = 200, message = "ok", response = String.class,         examples = @Example(value = {@ExampleProperty(mediaType = "application/json", ))}),
@@ -49,7 +49,7 @@ public class GmailController {
               return gmailService.getPrimaryKey(userPass);
           }
           else{
-              return new ResponseEntity<>("unavailable", HttpStatus.SERVICE_UNAVAILABLE);
+              return new ResponseEntity<>("Sorry, our server is down right now", HttpStatus.SERVICE_UNAVAILABLE);
           }
 
 
